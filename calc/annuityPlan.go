@@ -7,8 +7,7 @@ import (
 	"time"
 )
 
-type AnnuityPlan []AnnuityPlanPayment
-
+// AnnuityPlanPayment represents a single interval in annuity loan payback plan
 type AnnuityPlanPayment struct {
 	Date                          time.Time `json:"date"`
 	PaymentAmount                 money     `json:"borrowerPaymentAmount"`
@@ -18,6 +17,7 @@ type AnnuityPlanPayment struct {
 	RemainingOutstandingPrincipal money     `json:"remainingOutstandingPrincipal"`
 }
 
+// MarshalJSON customizes the json serialization with date formating
 func (app *AnnuityPlanPayment) MarshalJSON() ([]byte, error) {
 	type parent AnnuityPlanPayment
 	return json.Marshal(&struct {
@@ -37,12 +37,13 @@ func (m money) MarshalJSON() ([]byte, error) {
 	return []byte(val), nil
 }
 
-func CalcAnnuityPlan(amountCents int64, durationMonths int, annualInterestRatePercent float64, startDate time.Time) AnnuityPlan {
-	plan := AnnuityPlan{}
+// AnnuityPlan calculates payback plan for annuity loan. The loan amount is provided in
+// cents. Interest rate is in percents per year
+func AnnuityPlan(amountCents int64, durationMonths int, annualInterestRatePercent float64, startDate time.Time) []AnnuityPlanPayment {
+	plan := []AnnuityPlanPayment{}
 
 	outstandingPrincipal := money(amountCents)
 	paymentAmount := calcAnnuityPayment(outstandingPrincipal, durationMonths, annualInterestRatePercent/12)
-	var planPayment AnnuityPlanPayment
 	for i := 0; i < durationMonths; i++ {
 		date := startDate.AddDate(0, 1*i, 0)
 		interest := calcPaymentInterestPart(outstandingPrincipal, annualInterestRatePercent)
@@ -50,7 +51,7 @@ func CalcAnnuityPlan(amountCents int64, durationMonths int, annualInterestRatePe
 			paymentAmount = outstandingPrincipal + interest
 		}
 		remainingPrincipal := outstandingPrincipal - paymentAmount + interest
-		planPayment = AnnuityPlanPayment{
+		planPayment := AnnuityPlanPayment{
 			Date:                          date,
 			PaymentAmount:                 paymentAmount,
 			InterestAmount:                interest,

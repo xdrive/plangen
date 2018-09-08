@@ -73,7 +73,7 @@ func generatePlan(w http.ResponseWriter, r *http.Request) {
 	nominalRate, _ := strconv.ParseFloat(gr.NominalRate, 64)
 	startDate, _ := time.Parse(time.RFC3339, gr.StartDate)
 
-	plan := calc.CalcAnnuityPlan(loanAmount*100, gr.Duration, nominalRate, startDate)
+	plan := calc.AnnuityPlan(loanAmount*100, gr.Duration, nominalRate, startDate)
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	json.NewEncoder(w).Encode(plan)
