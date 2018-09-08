@@ -67,7 +67,6 @@ func generatePlan(w http.ResponseWriter, r *http.Request) {
 		log.Println("error validating request params:", err)
 		return
 	}
-	log.Println("request params:", gr)
 
 	// parse errors already checked in request validate method
 	loanAmount, _ := strconv.ParseInt(gr.LoanAmount, 10, 64)

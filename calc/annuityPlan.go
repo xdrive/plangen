@@ -10,29 +10,22 @@ import (
 type AnnuityPlan []AnnuityPlanPayment
 
 type AnnuityPlanPayment struct {
-	Date                          time.Time
-	PaymentAmount                 int64
-	PrincipalAmount               int64
-	InterestAmount                int64
-	InitialOutstandingPrincipal   int64
-	RemainingOutstandingPrincipal int64
+	Date                          time.Time `json:"date"`
+	PaymentAmount                 money     `json:"borrowerPaymentAmount"`
+	PrincipalAmount               money     `json:"principal"`
+	InterestAmount                money     `json:"interest"`
+	InitialOutstandingPrincipal   money     `json:"initialOutstandingPrincipal"`
+	RemainingOutstandingPrincipal money     `json:"remainingOutstandingPrincipal"`
 }
 
-func (app AnnuityPlanPayment) MarshalJSON() ([]byte, error) {
+func (app *AnnuityPlanPayment) MarshalJSON() ([]byte, error) {
+	type parent AnnuityPlanPayment
 	return json.Marshal(&struct {
-		Date                          string `json:"date"`
-		PaymentAmount                 money  `json:"borrowerPaymentAmount"`
-		PrincipalAmount               money  `json:"principal"`
-		InterestAmount                money  `json:"interest"`
-		InitialOutstandingPrincipal   money  `json:"initialOutstandingPrincipal"`
-		RemainingOutstandingPrincipal money  `json:"remainingOutstandingPrincipal"`
+		Date string `json:"date"`
+		*parent
 	}{
-		Date:                          app.Date.Format(time.RFC3339),
-		PaymentAmount:                 money(app.PaymentAmount),
-		PrincipalAmount:               money(app.PrincipalAmount),
-		InterestAmount:                money(app.InterestAmount),
-		InitialOutstandingPrincipal:   money(app.InitialOutstandingPrincipal),
-		RemainingOutstandingPrincipal: money(app.RemainingOutstandingPrincipal),
+		Date:   app.Date.Format(time.RFC3339),
+		parent: (*parent)(app),
 	})
 }
 
@@ -40,14 +33,15 @@ func (app AnnuityPlanPayment) MarshalJSON() ([]byte, error) {
 type money int64
 
 func (m money) MarshalJSON() ([]byte, error) {
-	val := fmt.Sprintf("%.2f", float64(m)/100.0)
+	val := fmt.Sprintf("\"%.2f\"", float64(m)/100.0)
 	return []byte(val), nil
 }
 
 func CalcAnnuityPlan(amountCents int64, durationMonths int, annualInterestRatePercent float64, startDate time.Time) AnnuityPlan {
 	plan := AnnuityPlan{}
-	paymentAmount := calcAnnuityPayment(amountCents, durationMonths, annualInterestRatePercent/12)
-	outstandingPrincipal := amountCents
+
+	outstandingPrincipal := money(amountCents)
+	paymentAmount := calcAnnuityPayment(outstandingPrincipal, durationMonths, annualInterestRatePercent/12)
 	var planPayment AnnuityPlanPayment
 	for i := 0; i < durationMonths; i++ {
 		date := startDate.AddDate(0, 1*i, 0)
@@ -71,13 +65,13 @@ func CalcAnnuityPlan(amountCents int64, durationMonths int, annualInterestRatePe
 	return plan
 }
 
-func calcAnnuityPayment(amountCents int64, durationMonths int, monthlyInterestRatePercent float64) int64 {
+func calcAnnuityPayment(amountCents money, durationMonths int, monthlyInterestRatePercent float64) money {
 	rate := monthlyInterestRatePercent / 100
 	monthlyAmount := float64(amountCents) * rate / (1 - math.Pow((1+rate), -float64(durationMonths)))
 
-	return int64(math.Round(monthlyAmount))
+	return money(math.Round(monthlyAmount))
 }
 
-func calcPaymentInterestPart(outstandingPrincipal int64, annualInterestRatePercent float64) int64 {
-	return int64(math.Round(annualInterestRatePercent * 30 * float64(outstandingPrincipal) / (360 * 100)))
+func calcPaymentInterestPart(outstandingPrincipal money, annualInterestRatePercent float64) money {
+	return money(math.Round(annualInterestRatePercent * 30 * float64(outstandingPrincipal) / (360 * 100)))
 }
