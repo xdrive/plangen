@@ -1,17 +1,12 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"time"
-
-	"github.com/xdrive/plangen/calc"
+	"log"
+	"net/http"
 )
 
 func main() {
-	t, _ := time.Parse(time.RFC3339, "2018-01-01T00:00:01Z")
-	plan := calc.CalcAnnuityPlan(500000, 24, 5.0, t)
+	http.HandleFunc("/generate-plan", generatePlan)
 
-	res, _ := json.MarshalIndent(plan, "", "  ")
-	fmt.Println(string(res))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
